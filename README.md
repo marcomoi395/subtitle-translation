@@ -35,7 +35,7 @@ This repository provides a tool for translating subtitle files from English to V
     
 2.  Run the script:
     
-    `node index.js` 
+    ```node index.js```
     
 3.  Enter the source and destination folders then click Translate.
     
