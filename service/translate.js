@@ -17,8 +17,15 @@ const parseSubtitle = (data) => {
 
     const timestampRegex =
         /\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}/;
+
+    const timestampRegexV2 =
+        /\d{2}:\d{2}:\d{2}.\d{3} --> \d{2}:\d{2}:\d{2}.\d{3}/;
+
     for (let i = 0; i < lines.length; i++) {
-        if (timestampRegex.test(lines[i].trim())) {
+        if (
+            timestampRegex.test(lines[i].trim()) ||
+            timestampRegexV2.test(lines[i].trim())
+        ) {
             let temp = [lines[i].trim()];
             i++;
             let text = '';
