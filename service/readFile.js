@@ -7,47 +7,40 @@ const process = async (source, destination) => {
         fs.mkdirSync(destination, { recursive: true });
     }
 
+    const files = await fs.promises.readdir(source);
 
-    fs.readdir(source, (err, files) => {
-        if (err) {
-            console.error('Lỗi khi đọc thư mục:', err);
-            return;
+    let time = 0;
+    for (const file of files) {
+        const sourceFilePath = path.join(source, file);
+        const destFilePath = path.join(destination, file);
+
+        try {
+            const stats = await fs.promises.stat(sourceFilePath);
+
+            if (stats.isFile()) {
+                const data = await fs.promises.readFile(sourceFilePath, 'utf8');
+                const dataAfterTranslate = await translationTools(data, time);
+
+                if (time === 3) {
+                    time = 0;
+                } else {
+                    time++;
+                }
+
+                await fs.promises.writeFile(
+                    destFilePath,
+                    dataAfterTranslate,
+                    'utf8'
+                );
+            }
+        } catch (err) {
+            console.error('Lỗi khi xử lý file:', err);
         }
 
-        files.forEach(file => {
-            const sourceFilePath = path.join(source, file);
-            const destFilePath = path.join(destination, file);
+        console.log('Xử lý xong file:', file);
+    }
 
-            // Kiểm tra xem đó có phải là file không (bỏ qua thư mục)
-            fs.stat(sourceFilePath, (err, stats) => {
-                if (err) {
-                    console.error('Lỗi khi đọc thông tin file:', err);
-                    return;
-                }
-
-                if (stats.isFile()) {
-                    // Đọc nội dung của file
-                    fs.readFile(sourceFilePath, 'utf8', async (err, data) => {
-                        if (err) {
-                            console.error('Lỗi khi đọc file:', err);
-                            return;
-                        }
-
-                        const res = await translationTools(data);
-                        // console.log(res);
-
-                        // Lưu lại nội dung đã sửa đổi vào file
-                        fs.writeFile(destFilePath, res, 'utf8', (err) => {
-                            if (err) {
-                                console.error('Lỗi khi ghi file:', err);
-                            }
-                        });
-                    });
-                }
-            });
-        });
-    });
-}
+    console.log('Xử lý hoàn tất!');
+};
 
 module.exports = process;
-

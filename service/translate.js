@@ -1,4 +1,5 @@
 const translate = require('@vitalets/google-translate-api');
+const azureTranslator = require('./azureTranslator.service');
 
 const translateUtils = async function translateText(inputText) {
     try {
@@ -7,34 +8,49 @@ const translateUtils = async function translateText(inputText) {
     } catch (error) {
         console.error(error);
     }
-}
+};
 
-const translationTools = async (data) => {
-    const regex = /(\d+)\r?\n([\d:,]+ --> [\d:,]+)\r?\n([\s\S]*?)(?=\r?\n\r?\n|\r?\n$)/g;
+const parseSubtitle = (data) => {
+    let subtitles = [];
+    let dialogues = [];
+    const lines = data.trim().split('\n');
 
-    const dialogues = [];
-    let match;
-
-    while ((match = regex.exec(data)) !== null) {
-        // match[3] chứa lời thoại
-        dialogues.push(match[3].trim());
-    }
-
-    // console.log(dialogues.join('\\\\'))
-    let dataAfterTranslation = await translateUtils(dialogues.join(`\n`));
-    dataAfterTranslation = dataAfterTranslation.text.split("\n")
-
-    const blocks = data.trim().split(/\n\s*\n/);
-
-    const updatedBlocks = blocks.map((block, index) => {
-        const lines = block.split('\n');
-        if (lines.length > 2) {
-            lines[2] = dataAfterTranslation[index];
+    const timestampRegex =
+        /\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}/;
+    for (let i = 0; i < lines.length; i++) {
+        if (timestampRegex.test(lines[i].trim())) {
+            let temp = [lines[i].trim()];
+            i++;
+            let text = '';
+            while (i < lines.length && lines[i].trim() !== '') {
+                text += lines[i] + '\n';
+                i++;
+            }
+            temp.push(text.trim());
+            dialogues.push(text);
+            subtitles.push(temp);
         }
-        return lines.join('\n');
+    }
+    return { subtitles, dialogues };
+};
+
+const translationTools = async (data, time) => {
+    const { subtitles, dialogues } = parseSubtitle(data.trim());
+
+    let dataAfterTranslation = await azureTranslator(
+        dialogues.join(` | `),
+        'en',
+        'vi',
+        time
+    );
+
+    dataAfterTranslation = dataAfterTranslation.split('|');
+
+    const formattedTranslations = dataAfterTranslation.map((item, index) => {
+        return `${index}\n${subtitles[index][0]}\n${item.trim()}`;
     });
 
-    return updatedBlocks.join('\n\n');
-}
+    return formattedTranslations.join('\n\n');
+};
 
 module.exports = translationTools;
