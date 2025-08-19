@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const process = require('./service/readFile');
+const processFile = require('./service/readFile');
 require('dotenv').config();
 
 const app = express();
@@ -18,7 +18,7 @@ app.post('/process', async (req, res) => {
     const { source, destination } = req.body;
 
     try {
-        await process(source, destination);
+        await processFile(source, destination);
 
         // Trả về kết quả dưới dạng JSON
         res.status(200).json({

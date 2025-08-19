@@ -1,15 +1,19 @@
 const fs = require('fs');
 const path = require('path');
-const translationTools = require('./translate');
+const SubtitleProcessor = require('./translate');
+const AzureTranslator = require("./azureTranslator.service");
+const vttToSrt = require("./convertVttToSrt");
 
-const process = async (source, destination) => {
+
+const processFile = async (source, destination) => {
     if (!fs.existsSync(destination)) {
-        fs.mkdirSync(destination, { recursive: true });
+        fs.mkdirSync(destination, {recursive: true});
     }
 
     const files = await fs.promises.readdir(source);
+    console.log("Starting translation file...");
 
-    let time = 0;
+
     for (const file of files) {
         const sourceFilePath = path.join(source, file);
         const destFilePath = path.join(destination, file);
@@ -18,29 +22,32 @@ const process = async (source, destination) => {
             const stats = await fs.promises.stat(sourceFilePath);
 
             if (stats.isFile()) {
-                const data = await fs.promises.readFile(sourceFilePath, 'utf8');
-                const dataAfterTranslate = await translationTools(data, time);
+                let data = await fs.promises.readFile(sourceFilePath, 'utf8');
 
-                if (time === 3) {
-                    time = 0;
-                } else {
-                    time++;
+                if (path.extname(file).toLowerCase() === ".vtt")
+                    data = vttToSrt(data);
+
+
+                    // Translate the subtitle from ENG to VI
+                    const translator = new AzureTranslator(process.env.SUBSCRIPTION_KEY, 'southeastasia');
+                    const processor = new SubtitleProcessor(translator);
+                    const translatedSubtitles = await processor.translateSubtitles(data, 'en', 'vi');
+
+                    await fs.promises.writeFile(destFilePath, translatedSubtitles, 'utf8');
                 }
 
-                await fs.promises.writeFile(
-                    destFilePath,
-                    dataAfterTranslate,
-                    'utf8'
-                );
             }
-        } catch (err) {
-            console.error('Lỗi khi xử lý file:', err);
+        catch
+            (err)
+            {
+                console.error('Lỗi khi xử lý file:', err);
+            }
+
+            console.log('Xử lý xong file:', file);
         }
 
-        console.log('Xử lý xong file:', file);
+        console.log('Success!');
     }
+    ;
 
-    console.log('Xử lý hoàn tất!');
-};
-
-module.exports = process;
+    module.exports = processFile;
